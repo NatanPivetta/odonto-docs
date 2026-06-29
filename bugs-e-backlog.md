@@ -61,7 +61,7 @@ em qualquer ambiente real o `JWT_SECRET` deve vir de variável de ambiente (em p
 SSM `/odonto-dev/jwt/secret`). **Pendência:** o valor antigo continua no **histórico do git** —
 se quiser eliminá-lo de vez, reescrever o histórico (`git filter-repo`) e/ou rotacionar.
 
-### 10. Segredos na pasta Terraform (tfvars/tfstate) 🔴 ação requerida
+### 10. Segredos na pasta Terraform (tfvars/tfstate) ✅ corrigido
 **Onde:** `aws terraform deploy/.../terraform/terraform.tfvars`, `terraform.tfstate(.backup)`.
 Contêm App Password do Gmail, senha master do RDS e JWT secret em texto puro. A pasta
 `aws terraform deploy/` está no `.gitignore` do backend (verificar que não foram commitados
@@ -82,6 +82,44 @@ validação e 409 só para conflito real).
 ### 14. Usuário administrador padrão com senha conhecida
 `DataInitializer` cria `000000001 / Admin@123` em qualquer ambiente. Restringir ao perfil local
 ou forçar troca de senha no primeiro login.
+
+### 15. Select de turmas no cadastro de atividade (professor) exibe todas as turmas ativas ✅ corrigido
+**Onde:** `NewActivityModal.tsx` (frontend); `TurmaRepository`, `TurmaService`, `TurmaResource` (backend).
+
+Ao cadastrar uma atividade para um aluno, o select de turmas listava **todas as turmas ativas**
+do sistema em vez das turmas em que o aluno está matriculado.
+
+**Correção aplicada:**
+- Backend: novo endpoint `GET /v1/turmas/aluno/{alunoId}` que retorna apenas turmas com matrícula ativa para o aluno.
+- Frontend: select de turmas agora é reativo ao aluno selecionado — carrega via `listTurmasDoAluno(alunoId)`. Se o aluno tiver apenas uma turma ativa, é pré-selecionada automaticamente.
+
+**Efeito colateral identificado:** alunos com duas matrículas ativas simultâneas no banco (dado
+inconsistente, violação da regra de item 1) causavam 401 no cadastro de atividade pelo aluno —
+ver item 17.
+
+---
+
+### 16. Status não inferido automaticamente quando dataConclusão é informada ✅ corrigido
+**Onde:** `AtividadeService.resolverStatus` (backend); `NewActivityModal.tsx` (frontend).
+
+Atividade criada com `dataConclusao` preenchida aceitava `status = EM_ANDAMENTO` sem ajuste.
+
+**Correção aplicada:**
+- Backend: overload `resolverStatus(data, status, dataConclusao)` — se `dataConclusao != null` e status não for `CONCLUIDA`/`ALTA`, força `CONCLUIDA`. Aplicado nos dois métodos de criação (`create` e `createAsAluno`).
+- Frontend: `onChange` da data de conclusão seta `status = 'CONCLUIDA'` automaticamente.
+
+---
+
+### 17. Aluno com duas matrículas ativas causa 401 ao criar atividade ✅ corrigido
+**Onde:** `TurmaRepository.findActiveTurmaForAluno`.
+
+`createAsAluno` chama `findActiveTurmaForAluno`, que retorna `Optional<Turma>`. Com dois
+registros ativos no banco, o JPA lançava `NonUniqueResultException` — capturado pelo Spring
+Security como falha de autenticação e convertido em **401**.
+
+**Correção aplicada:** adicionado `ORDER BY t.id DESC LIMIT 1` na query, tornando-a tolerante
+a dados inconsistentes. A causa raiz (duas matrículas ativas) deve ser corrigida diretamente
+no banco e está coberta pelo guard do `TurmaService` para novas matrículas (item 1).
 
 ---
 
