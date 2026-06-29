@@ -193,7 +193,7 @@ flowchart TB
         ERR3[400 — alta exige status CONCLUIDA]
     end
 
-    P1 -->|PATCH /v1/atividades/{id}/status| S1
+    P1 -->|PATCH /v1/atividades/id/status| S1
     S1 -->|Não| ERR1
     S1 -->|Sim| S2
     S2 -->|Sim| ERR2
@@ -238,7 +238,7 @@ flowchart TB
         ERR3[409 — aluno já matriculado]
     end
 
-    P1 -->|POST /v1/turmas/{id}/alunos/{alunoId}| S1
+    P1 -->|POST /v1/turmas/id/alunos/{alunoId}| S1
     S1 -->|Não| ERR1
     S1 -->|Sim| S2
     S2 -->|Não| ERR2
@@ -276,7 +276,7 @@ flowchart TB
         ERR1[400 — turma encerrada]
     end
 
-    P1 -->|POST /v1/turmas/{id}/alunos/bulk| S1
+    P1 -->|POST /v1/turmas/id/alunos/bulk| S1
     S1 -->|Não| ERR1
     S1 -->|Sim| S2
     S2 --> S3
