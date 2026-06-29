@@ -90,7 +90,7 @@ ou forçar troca de senha no primeiro login.
 - **Testes do frontend:** sem suíte automatizada. Backend tem `AtividadeServiceTest`.
 - **OAuth (Google):** login alternativo planejado, mantendo cardNumber + senha como identidade
   canônica (`tokenStorage` em `src/lib/api.ts` é o ponto de extensão).
-- **Versionar o código Terraform:** hoje a pasta inteira é gitignorada. Para incluí-la no kit,
-  versionar só o código (`.tf`, `.sh`, `*.example`) com `.gitignore` granular excluindo
-  `*.tfvars`, `*.tfstate*` e `.terraform/`.
+- **Versionar o código Terraform:** ✅ concluído. Código versionado em
+  [NatanPivetta/odonto-terraform](https://github.com/NatanPivetta/odonto-terraform)
+  com `.gitignore` excluindo `*.tfvars`, `*.tfstate*` e `.terraform/`.
 - **`src.rar`** na raiz do projeto: artefato antigo; avaliar remoção.

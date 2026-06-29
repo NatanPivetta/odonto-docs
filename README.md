@@ -6,9 +6,9 @@ Odontologia da UFRGS**. Este repositório é o **Guia de Sobrevivência** do pro
 sistema — backend, frontend e infraestrutura (Terraform/AWS).
 
 > Os repositórios de código apontam para cá:
-> - **Backend** (Spring Boot): `NatanPivetta/odontoBackend`
-> - **Frontend** (Next.js): repositório do frontend
-> - **Infra** (Terraform/AWS): versionada junto ao backend, em `aws terraform deploy/`
+> - **Backend** (Spring Boot): [NatanPivetta/odontoBackend](https://github.com/NatanPivetta/odontoBackend)
+> - **Frontend** (Next.js): [NatanPivetta/odonto](https://github.com/NatanPivetta/odonto)
+> - **Infra** (Terraform/AWS) — opcional: [NatanPivetta/odonto-terraform](https://github.com/NatanPivetta/odonto-terraform)
 
 ---
 
@@ -22,7 +22,7 @@ senha**; alunos podem se auto-cadastrar via fluxo de **primeiro acesso** (códig
 |-------------|------------------------------------------------|---------------|-------------------|
 | **Backend** | Java 21 · Spring Boot 3.4 · PostgreSQL · Maven | `8090`        | AWS EC2 + RDS     |
 | **Frontend**| Next.js 16 · React 19 · TypeScript · Tailwind  | `3000`        | Vercel            |
-| **Infra**   | Terraform · AWS (VPC, EC2, RDS, ECR, SSM, IAM) | —             | `terraform apply` |
+| **Infra** *(opcional)* | Terraform · AWS (VPC, EC2, RDS, ECR, SSM, IAM) | — | `terraform apply` — ver [NatanPivetta/odonto-terraform](https://github.com/NatanPivetta/odonto-terraform) |
 
 ---
 

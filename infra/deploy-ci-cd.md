@@ -17,7 +17,8 @@ Autenticação na AWS via **OIDC** (sem chaves estáticas no GitHub). O deploy �
 Pré-requisitos: AWS CLI autenticada com permissão para criar os recursos, Terraform `>= 1.6`.
 
 ```bash
-cd "backend/aws terraform deploy/odonto-infra/infra/terraform"
+git clone https://github.com/NatanPivetta/odonto-terraform
+cd odonto-terraform/infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edite: github_repository, frontend_origin, mail_username, mail_password
 terraform init

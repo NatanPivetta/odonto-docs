@@ -2,6 +2,36 @@
 
 ## Componentes
 
+```mermaid
+flowchart LR
+    subgraph Cliente
+        FE["Frontend\nNext.js 16 / React 19\n(:3000)"]
+    end
+
+    subgraph Servidor
+        API["API REST Spring Boot\ncontext-path /api (:8090)"]
+
+        subgraph Camadas
+            SEC["Security\nfiltro JWT + BCrypt"]
+            RES["Resource (v1)\ncontrollers REST"]
+            SVC["Service\nregras de negócio"]
+            REP["Repository\nSpring Data JPA"]
+            EMAIL["EmailService\nSMTP (primeiro acesso)"]
+        end
+    end
+
+    DB[("PostgreSQL 16\nschema via Liquibase")]
+    SMTP["Servidor SMTP\n(Gmail)"]
+
+    FE -->|"HTTPS + Bearer JWT"| API
+    API --> SEC
+    SEC -.->|"valida token"| RES
+    RES --> SVC
+    SVC --> REP
+    SVC --> EMAIL
+    REP --> DB
+    EMAIL --> SMTP
+```
 
 - **API stateless:** autenticação por **JWT** (sem sessão). O `JwtAuthenticationFilter` valida
   o token e injeta o `User` autenticado no contexto de segurança.
