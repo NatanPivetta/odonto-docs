@@ -65,7 +65,7 @@ A nuvem é **opcional**. Há três caminhos, do mais simples ao mais completo:
 |---|---|---|
 | **1. Local (dev)** | `mvnw spring-boot:run` + `npm run dev` + Postgres em Docker | Desenvolvimento e avaliação. **Não precisa de AWS nem Vercel.** |
 | **2. Self-hosted (Docker)** | `docker compose up` no backend (+ servir o build do frontend) em qualquer VM/servidor | Subir num servidor próprio, on-premise ou outro provedor. |
-| **3. Nuvem de referência** | AWS (EC2 + RDS via Terraform) + Vercel (frontend) | Reaproveitar a infra atual já provisionada. Ver seção [Infraestrutura](#infraestrutura-terraform--aws--opcional). |
+| **3. Nuvem de referência** | AWS (EC2 + RDS via Terraform) + Vercel (frontend) | Reaproveitar a infra atual já provisionada. Ver [Arquitetura AWS](infra/arquitetura-aws.md) e [Deploy e CI/CD](infra/deploy-ci-cd.md). |
 
 Os cenários 1 e 2 cobrem 100% do sistema sem depender de nenhum serviço gerenciado.
 
