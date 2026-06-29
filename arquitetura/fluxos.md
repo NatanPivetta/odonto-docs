@@ -238,7 +238,7 @@ flowchart TB
         ERR3[409 — aluno já matriculado]
     end
 
-    P1 -->|POST /v1/turmas/id/alunos/{alunoId}| S1
+    P1 -->|POST /v1/turmas/id/alunos/alunoId| S1
     S1 -->|Não| ERR1
     S1 -->|Sim| S2
     S2 -->|Não| ERR2
