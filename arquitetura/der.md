@@ -1,6 +1,83 @@
 # DER — Modelo de dados
 
-<img src="../img/der.png" width="1000">
+```mermaid
+erDiagram
+    USERS ||--o{ TURMA_ALUNOS : "matriculado em"
+    TURMAS ||--o{ TURMA_ALUNOS : "possui"
+    USERS ||--o{ ATIVIDADES : "aluno"
+    USERS ||--o{ ATIVIDADES : "prof. orientador"
+    USERS ||--o{ ATIVIDADES : "prof. tutor (opc.)"
+    TURMAS ||--o{ ATIVIDADES : "contém"
+    ATIVIDADES ||--o{ ATIVIDADES : "atividade pai/filha"
+    ATIVIDADES ||--o{ FEEDBACKS : "recebe"
+    USERS ||--o{ FEEDBACKS : "autor (professor)"
+
+    USERS {
+        bigint    id PK
+        varchar   name
+        varchar   email UK
+        varchar   card_number UK "9 dígitos — login"
+        varchar   password_hash "BCrypt"
+        varchar   role "ALUNO | PROFESSOR"
+        boolean   active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TURMAS {
+        bigint    id PK
+        varchar   disciplina
+        varchar   name
+        varchar   semester
+        boolean   active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TURMA_ALUNOS {
+        bigint  turma_id PK,FK
+        bigint  aluno_id PK,FK
+        boolean active "matrícula ativa?"
+    }
+
+    ATIVIDADES {
+        bigint    id PK
+        date      data
+        date      data_conclusao "nullable"
+        varchar   prontuario
+        varchar   nome_paciente "nullable"
+        text      observacoes "nullable"
+        varchar   status "PENDENTE|EM_ANDAMENTO|CONCLUIDA|ALTA"
+        varchar   tipo "enum TipoAtividade"
+        varchar   tipo_descricao "p/ tipo=OUTROS"
+        bigint    aluno_id FK
+        bigint    professor_orientador_id FK
+        bigint    professor_tutor_id FK "nullable"
+        bigint    turma_id FK
+        bigint    atividade_pai_id FK "nullable"
+        boolean   active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    FEEDBACKS {
+        bigint    id PK
+        text      texto
+        bigint    atividade_id FK
+        bigint    professor_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EMAIL_VERIFICATION_CODES {
+        bigint    id PK
+        varchar   email
+        varchar   code "6 dígitos"
+        timestamp expires_at "TTL 15 min"
+        boolean   used
+        timestamp created_at
+    }
+```
 
 > `EMAIL_VERIFICATION_CODES` não tem FK para `USERS` por design: o código é gerado **antes** de
 > a conta existir (fluxo de primeiro acesso), usando o e-mail como chave lógica.

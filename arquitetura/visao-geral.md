@@ -2,7 +2,6 @@
 
 ## Componentes
 
-<img src="../img/visao-geral-componentes.png" width="1000">
 
 - **API stateless:** autenticação por **JWT** (sem sessão). O `JwtAuthenticationFilter` valida
   o token e injeta o `User` autenticado no contexto de segurança.
