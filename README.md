@@ -31,6 +31,7 @@ senha**; alunos podem se auto-cadastrar via fluxo de **primeiro acesso** (códig
 ### Arquitetura
 - [Visão geral](arquitetura/visao-geral.md) — módulos, stack, comunicação, modelo de domínio.
 - [DER (banco de dados)](arquitetura/der.md) — entidades, relacionamentos e tabelas.
+- [Diagramas de classe](arquitetura/diagramas-de-classe.md) — classes JPA do backend atual e relacionamentos.
 - [Casos de uso](arquitetura/casos-de-uso.md) — atores e fronteiras do sistema.
 - [Fluxos de negócio](arquitetura/fluxos.md) — sequência, estados e fluxogramas.
 
