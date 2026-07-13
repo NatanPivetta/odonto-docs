@@ -1,31 +1,31 @@
-# Arquitetura — Visão geral
+# Arquitetura - Visao Geral
 
 ## Componentes
 
 ```mermaid
 flowchart LR
     subgraph Cliente
-        FE["Frontend\nNext.js 16 / React 19\n(:3000)"]
+        FE["Frontend\nNext.js / React\n(:3000)"]
     end
 
     subgraph Servidor
         API["API REST Spring Boot\ncontext-path /api (:8090)"]
 
         subgraph Camadas
-            SEC["Security\nfiltro JWT + BCrypt"]
+            SEC["Security\nJWT + RBAC + BCrypt"]
             RES["Resource (v1)\ncontrollers REST"]
-            SVC["Service\nregras de negócio"]
+            SVC["Service\nregras de negocio"]
             REP["Repository\nSpring Data JPA"]
             EMAIL["EmailService\nSMTP (primeiro acesso)"]
         end
     end
 
-    DB[("PostgreSQL 16\nschema via Liquibase")]
-    SMTP["Servidor SMTP\n(Gmail)"]
+    DB[("PostgreSQL\nschema via Liquibase")]
+    SMTP["Servidor SMTP"]
 
     FE -->|"HTTPS + Bearer JWT"| API
     API --> SEC
-    SEC -.->|"valida token"| RES
+    SEC -.->|"valida token e authorities"| RES
     RES --> SVC
     SVC --> REP
     SVC --> EMAIL
@@ -33,52 +33,61 @@ flowchart LR
     EMAIL --> SMTP
 ```
 
-- **API stateless:** autenticação por **JWT** (sem sessão). O `JwtAuthenticationFilter` valida
-  o token e injeta o `User` autenticado no contexto de segurança.
-- **Autorização por papel** via `@PreAuthorize("hasRole('PROFESSOR'|'ALUNO')")` nos resources.
-- **Mapeamento entidade↔DTO** com MapStruct; **schema** gerido por Liquibase e apenas
-  *validado* pelo Hibernate (`ddl-auto: validate`).
-- **Organização por módulos de domínio:** `core` (usuários/auth), `turma`, `atividade`.
+- **API stateless:** autenticacao por JWT, sem sessao. O `JwtAuthenticationFilter` valida o
+  token e injeta o `User` autenticado no contexto de seguranca.
+- **Autorizacao por RBAC:** o usuario ainda mantem o campo legado `role`, mas agora tambem
+  carrega `roles` e `permissions` persistidas no banco. Os resources usam `@PreAuthorize` com
+  `hasAuthority(...)` e `hasAnyAuthority(...)`.
+- **Mapeamento entidade-DTO:** MapStruct.
+- **Schema:** gerido por Liquibase e apenas validado pelo Hibernate (`ddl-auto: validate`).
+- **Organizacao por modulos de dominio:** `core` (usuarios/auth/seguranca), `turma` e
+  `atividade`.
 
 ## Stack
 
-| Camada      | Tecnologias                                                                 |
-|-------------|----------------------------------------------------------------------------|
-| Frontend    | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Radix UI       |
-| Backend     | Java 21, Spring Boot 3.4 (Web, Security, Data JPA, Validation, Mail), JWT (jjwt), MapStruct, Lombok |
-| Banco       | PostgreSQL 16, migrations com Liquibase                                     |
-| Build/Infra | Maven (wrapper), Docker, Terraform, AWS, GitHub Actions                     |
-| Docs API    | springdoc-openapi (Swagger UI em `/api/swagger-ui.html`)                    |
+| Camada | Tecnologias |
+| --- | --- |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS, Radix UI |
+| Backend | Java 21, Spring Boot, Spring Security, Data JPA, Validation, Mail, JWT, MapStruct, Lombok |
+| Banco | PostgreSQL, migrations com Liquibase |
+| Build/Infra | Maven wrapper, Docker, Terraform, AWS, GitHub Actions |
+| Docs API | springdoc-openapi, Swagger UI em `/api/swagger-ui.html` |
 
-## Modelo de domínio (resumo)
+## Modelo De Dominio
 
-- **User** — aluno ou professor (`role`). Login por número de cartão (9 dígitos) + senha
-  (BCrypt). O `cardNumber` é a identidade canônica.
-- **Turma** — disciplina + semestre. Cada turma é específica de um semestre (turmas de
-  semestres diferentes têm `id` distinto). Alunos são matriculados via **TurmaAluno**
-  (matrícula com flag `active`); um aluno tem no máximo **uma matrícula ativa** por vez.
-- **Atividade** — procedimento clínico de um aluno, vinculado a uma turma, um professor
-  orientador (e opcionalmente um tutor). Tem `tipo` (enum de ~40 procedimentos), `status`
-  (`PENDENTE` → `EM_ANDAMENTO` → `CONCLUIDA` → `ALTA`) e pode ter atividades-filhas
-  (`atividadePai`).
-- **Feedback** — comentários de professores numa atividade.
+- **User:** usuario autenticavel. Login por numero de cartao com 8 digitos e senha BCrypt.
+  `cardNumber` e a identidade canonica. A autorizacao usa RBAC por `roles` e `permissions`,
+  mantendo o campo legado `role` durante a transicao.
+- **SecurityRole / SecurityPermission:** entidades que representam `roles`, `permissions`,
+  `user_roles` e `role_permissions`. As permissions carregadas viram `GrantedAuthority`.
+- **Turma:** disciplina clinica (`ODO99012`, `ODO99013`, `ODO99014`, `ODO99016`), codigo da
+  turma, nome e semestre. Alunos sao matriculados via `TurmaAluno`.
+- **Atividade:** procedimento clinico de um aluno, vinculado a turma, professor orientador e
+  opcionalmente professor tutor. Possui status, tipo e pode ter atividade pai.
+- **Feedback:** comentarios de professores em uma atividade.
 
 Detalhes em [DER](der.md), [casos de uso](casos-de-uso.md) e [fluxos](fluxos.md).
 
-## Principais endpoints
+## Principais Endpoints
 
-Base: `/api`. Documentação interativa: `/api/swagger-ui.html`.
+Base: `/api`. Documentacao interativa: `/api/swagger-ui.html`.
 
-| Método | Caminho                              | Papel     | Descrição                            |
-|--------|--------------------------------------|-----------|--------------------------------------|
-| POST   | `/auth/login`                        | público   | Login (cardNumber + senha)           |
-| POST   | `/auth/verify/send`                  | público   | Envia código de primeiro acesso      |
-| POST   | `/auth/register`                     | público   | Conclui primeiro acesso (cria aluno) |
-| GET    | `/v1/atividades`                     | PROFESSOR | Lista/filtra atividades              |
-| POST   | `/v1/atividades`                     | PROFESSOR | Cria atividade                       |
-| GET    | `/v1/atividades/minhas`              | ALUNO     | Lista as próprias atividades         |
-| POST   | `/v1/atividades/aluno`               | ALUNO     | Cria atividade (turma inferida)      |
-| PATCH  | `/v1/atividades/{id}/status`         | AMBOS     | Atualiza status (alta só professor)  |
-| POST   | `/v1/turmas/{id}/alunos/{alunoId}`   | PROFESSOR | Matricula um aluno                   |
-| POST   | `/v1/turmas/{id}/alunos/bulk`        | PROFESSOR | Matricula vários alunos              |
-| POST   | `/v1/atividades/{id}/feedbacks`      | PROFESSOR | Adiciona feedback                    |
+| Metodo | Caminho | Permissao principal | Descricao |
+| --- | --- | --- | --- |
+| POST | `/auth/login` | publico | Login com `cardNumber` + senha |
+| POST | `/auth/verify/send` | publico | Envia codigo de primeiro acesso |
+| POST | `/auth/register` | publico | Conclui primeiro acesso e cria aluno |
+| GET | `/v1/atividades` | `ACTIVITY_VIEW_ANY` | Lista e filtra atividades |
+| POST | `/v1/atividades` | `ACTIVITY_CREATE` | Cria atividade |
+| GET | `/v1/atividades/minhas` | `ACTIVITY_VIEW_OWN` | Lista as proprias atividades |
+| POST | `/v1/atividades/aluno` | `ACTIVITY_CREATE` | Cria atividade como aluno |
+| PATCH | `/v1/atividades/{id}/status` | `ACTIVITY_UPDATE_ANY` ou `ACTIVITY_UPDATE_OWN` | Atualiza status |
+| GET | `/v1/turmas` | `CLASS_VIEW` | Lista turmas |
+| POST | `/v1/turmas` | `CLASS_MANAGE` | Cria turma |
+| POST | `/v1/turmas/{id}/alunos/{alunoId}` | `CLASS_MANAGE` | Matricula um aluno |
+| POST | `/v1/turmas/{id}/alunos/bulk` | `CLASS_MANAGE` | Matricula varios alunos |
+| GET | `/v1/professores` | `PROFESSOR_VIEW` | Lista professores |
+| GET | `/v1/alunos` | `STUDENT_VIEW` | Lista alunos |
+| POST | `/v1/users` | `USER_MANAGE` | Cria usuario |
+| GET | `/v1/users` | `USER_VIEW` | Lista usuarios |
+| POST | `/v1/atividades/{id}/feedbacks` | `FEEDBACK_CREATE` | Adiciona feedback |

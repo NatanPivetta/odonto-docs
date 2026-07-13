@@ -1,18 +1,15 @@
-# Diagramas de classe do backend
+# Diagramas De Classe Do Backend
 
 Este documento representa o estado atual do backend Spring Boot, com base nas entidades JPA
 implementadas em `backend/src/main/java/br/ufrgs/odonto/modules`.
 
 Escopo atual:
 
-- `core`: usuarios e codigos de verificacao por e-mail;
-- `turma`: turmas e matriculas;
+- `core`: usuarios, autenticacao, verificacao por e-mail e RBAC;
+- `turma`: turmas, disciplinas clinicas e matriculas;
 - `atividade`: atividades clinicas e feedbacks.
 
-Os modulos futuros de agendamento, anexos, exames e demandas clinicas ainda nao existem no
-backend atual e, portanto, nao aparecem nestes diagramas.
-
-## Visao geral do dominio
+## Visao Geral Do Dominio
 
 ```mermaid
 classDiagram
@@ -32,6 +29,7 @@ classDiagram
         +String cardNumber
         +String passwordHash
         +Role role
+        +Set~SecurityRole~ roles
         +boolean active
         +getAuthorities()
         +getPassword()
@@ -39,18 +37,23 @@ classDiagram
         +isEnabled()
     }
 
-    class EmailVerificationCode {
+    class SecurityRole {
         +Long id
-        +String email
-        +String code
-        +LocalDateTime expiresAt
-        +boolean used
-        +LocalDateTime createdAt
+        +RoleName name
+        +String description
+        +Set~SecurityPermission~ permissions
+    }
+
+    class SecurityPermission {
+        +Long id
+        +PermissionName name
+        +String description
     }
 
     class Turma {
         +Long id
-        +String disciplina
+        +DisciplinaClinica disciplina
+        +String codigoTurma
         +String name
         +String semester
         +boolean active
@@ -63,11 +66,6 @@ classDiagram
         +Turma turma
         +User aluno
         +boolean active
-    }
-
-    class TurmaAlunoId {
-        +Long turmaId
-        +Long alunoId
     }
 
     class Atividade {
@@ -95,38 +93,15 @@ classDiagram
         +User professor
     }
 
-    class Role {
-        <<enumeration>>
-        PROFESSOR
-        ALUNO
-    }
-
-    class StatusAtividade {
-        <<enumeration>>
-        PENDENTE
-        EM_ANDAMENTO
-        CONCLUIDA
-        ALTA
-    }
-
-    class TipoAtividade {
-        <<enumeration>>
-        ENTREVISTA_DECAPAGEM_EXAME
-        ESTOMATOLOGIA_PATOLOGIA
-        BIOPSIA
-        EXAME_LABORATORIAL
-        EXAME_MICROBIOLOGICO
-        OUTROS
-    }
-
     Auditable~String~ <|-- User
     Auditable~String~ <|-- Turma
     Auditable~String~ <|-- Atividade
     Auditable~String~ <|-- Feedback
 
-    User --> Role
+    User "0..*" --> "0..*" SecurityRole : roles
+    SecurityRole "0..*" --> "0..*" SecurityPermission : permissions
+
     Turma "1" o-- "0..*" TurmaAluno : matriculas
-    TurmaAluno --> TurmaAlunoId
     TurmaAluno "0..*" --> "1" User : aluno
 
     Atividade "0..*" --> "1" User : aluno
@@ -134,23 +109,12 @@ classDiagram
     Atividade "0..*" --> "0..1" User : professorTutor
     Atividade "0..*" --> "1" Turma : turma
     Atividade "0..*" --> "0..1" Atividade : atividadePai
-    Atividade --> StatusAtividade
-    Atividade --> TipoAtividade
 
     Feedback "0..*" --> "1" Atividade : atividade
     Feedback "0..*" --> "1" User : professor
 ```
 
-Observacoes:
-
-- `Auditable<String>` e uma superclasse mapeada, nao uma tabela propria.
-- `User` tambem implementa `UserDetails`, usado pelo Spring Security.
-- `EmailVerificationCode` guarda codigos de primeiro acesso por e-mail, mas nao possui chave
-  estrangeira para `User`; a associacao e feita pelo campo `email`.
-- `TipoAtividade` possui mais valores no codigo do que os exibidos no diagrama geral. A lista
-  completa aparece mais abaixo.
-
-## Core e autenticacao
+## Core, Autenticacao E RBAC
 
 ```mermaid
 classDiagram
@@ -164,13 +128,6 @@ classDiagram
         +isEnabled()
     }
 
-    class Auditable~String~ {
-        +LocalDateTime createdAt
-        +LocalDateTime updatedAt
-        +String createdBy
-        +String lastModifiedBy
-    }
-
     class User {
         +Long id
         +String name
@@ -178,11 +135,22 @@ classDiagram
         +String cardNumber
         +String passwordHash
         +Role role
+        +Set~SecurityRole~ roles
         +boolean active
         +getAuthorities()
-        +getPassword()
-        +getUsername()
-        +isEnabled()
+    }
+
+    class SecurityRole {
+        +Long id
+        +RoleName name
+        +String description
+        +Set~SecurityPermission~ permissions
+    }
+
+    class SecurityPermission {
+        +Long id
+        +PermissionName name
+        +String description
     }
 
     class EmailVerificationCode {
@@ -200,49 +168,77 @@ classDiagram
         ALUNO
     }
 
-    Auditable~String~ <|-- User
+    class RoleName {
+        <<enumeration>>
+        ADMIN
+        PROFESSOR
+        ALUNO
+        COORDENADOR
+        MONITOR
+    }
+
+    class PermissionName {
+        <<enumeration>>
+        USER_MANAGE
+        USER_VIEW
+        PROFESSOR_VIEW
+        STUDENT_VIEW
+        CLASS_MANAGE
+        CLASS_VIEW
+        ACTIVITY_CREATE
+        ACTIVITY_UPDATE_OWN
+        ACTIVITY_UPDATE_ANY
+        ACTIVITY_VIEW_OWN
+        ACTIVITY_VIEW_ANY
+        ACTIVITY_REVIEW
+        FEEDBACK_CREATE
+        FEEDBACK_VIEW_OWN
+        FEEDBACK_VIEW_ANY
+    }
+
     UserDetails <|.. User
-    User --> Role
+    User --> Role : legado
+    User "0..*" --> "0..*" SecurityRole : user_roles
+    SecurityRole --> RoleName
+    SecurityRole "0..*" --> "0..*" SecurityPermission : role_permissions
+    SecurityPermission --> PermissionName
     EmailVerificationCode ..> User : email corresponde a User.email
 ```
 
 Regras relevantes:
 
 - Login usa `cardNumber` como identificador (`getUsername()` retorna o numero de cartao).
-- `role` define autorizacao por perfil (`PROFESSOR` ou `ALUNO`).
-- `active` controla se a conta esta habilitada.
-- O fluxo de primeiro acesso usa `EmailVerificationCode` com validade e flag `used`.
+- `User.role` permanece para compatibilidade com fluxos legados.
+- `User.roles.permissions` gera as authorities usadas por `@PreAuthorize`.
+- Resources novos devem preferir `hasAuthority(...)` em vez de `hasRole(...)`.
+- `EmailVerificationCode` guarda codigos de primeiro acesso por e-mail sem FK para `User`.
 
-## Turmas e matriculas
+## Turmas E Matriculas
 
 ```mermaid
 classDiagram
     direction LR
 
-    class Auditable~String~ {
-        +LocalDateTime createdAt
-        +LocalDateTime updatedAt
-        +String createdBy
-        +String lastModifiedBy
-    }
-
-    class User {
-        +Long id
-        +String name
-        +String email
-        +String cardNumber
-        +Role role
-        +boolean active
-    }
-
     class Turma {
         +Long id
-        +String disciplina
+        +DisciplinaClinica disciplina
+        +String codigoTurma
         +String name
         +String semester
         +boolean active
         +Set~TurmaAluno~ matriculas
         +getAlunosAtivos()
+    }
+
+    class DisciplinaClinica {
+        <<enumeration>>
+        ODO99012
+        ODO99013
+        ODO99014
+        ODO99016
+        +getCodigo()
+        +getNome()
+        +getLabel()
     }
 
     class TurmaAluno {
@@ -257,52 +253,18 @@ classDiagram
         +Long alunoId
     }
 
-    Auditable~String~ <|-- User
-    Auditable~String~ <|-- Turma
-
+    Turma --> DisciplinaClinica
     Turma "1" o-- "0..*" TurmaAluno : matriculas
     TurmaAluno "0..*" --> "1" Turma : turma
     TurmaAluno "0..*" --> "1" User : aluno
     TurmaAluno --> TurmaAlunoId : chave composta
 ```
 
-Regras relevantes:
-
-- `TurmaAluno` e a entidade de associacao entre turma e aluno.
-- A chave composta `TurmaAlunoId` contem `turmaId` e `alunoId`.
-- A flag `active` em `TurmaAluno` permite manter historico e desativar matriculas antigas.
-- O backend trata a regra de que um aluno deve possuir no maximo uma matricula ativa.
-- `Turma.active = false` representa turma encerrada.
-
-## Atividades e feedbacks
+## Atividades E Feedbacks
 
 ```mermaid
 classDiagram
     direction LR
-
-    class Auditable~String~ {
-        +LocalDateTime createdAt
-        +LocalDateTime updatedAt
-        +String createdBy
-        +String lastModifiedBy
-    }
-
-    class User {
-        +Long id
-        +String name
-        +String email
-        +String cardNumber
-        +Role role
-        +boolean active
-    }
-
-    class Turma {
-        +Long id
-        +String disciplina
-        +String name
-        +String semester
-        +boolean active
-    }
 
     class Atividade {
         +Long id
@@ -344,45 +306,8 @@ classDiagram
         BIOPSIA
         EXAME_LABORATORIAL
         EXAME_MICROBIOLOGICO
-        AFASTAMENTO_DENTARIO
-        ATF
-        ORIENTACAO_HB_ROHB
-        RESTAURACAO_PROVISORIA
-        RESTAURACAO_RESINA_POSTERIOR
-        RESTAURACAO_RESINA_ANTERIOR
-        CONFECCAO_DE_GUIA
-        RESTAURACAO_AMALGAMA
-        ACABAMENTO_POLIMENTO
-        REPARO_CONSERTO_RESTAURACAO
-        INLAY_ONLAY
-        FACETAS
-        CLAREAMENTO_VITAL
-        RAP_OHB
-        RASUB
-        EXAME_INTERMEDIARIO_PERIODONTAL
-        CIRURGIA_PERIODONTAL
-        PLACA_MIORRELAXANTE
-        ENDODONTIA_MONO
-        ENDODONTIA_PRE_MOLAR
-        ENDODONTIA_MOLAR
-        PULPOTOMIA
-        CLAREAMENTO_INTERNO
-        PROVISORIO_PROTESE_FIXA
-        NUCLEO
-        COROA
-        PPR
-        PT
-        PPF
-        PPR_PROVISORIA
-        URGENCIA
-        CONSERTO_PROTESE
         OUTROS
     }
-
-    Auditable~String~ <|-- User
-    Auditable~String~ <|-- Turma
-    Auditable~String~ <|-- Atividade
-    Auditable~String~ <|-- Feedback
 
     Atividade "0..*" --> "1" User : aluno
     Atividade "0..*" --> "1" User : professorOrientador
@@ -391,25 +316,13 @@ classDiagram
     Atividade "0..*" --> "0..1" Atividade : atividadePai
     Atividade --> StatusAtividade
     Atividade --> TipoAtividade
-
     Feedback "0..*" --> "1" Atividade : atividade
     Feedback "0..*" --> "1" User : professor
 ```
 
-Regras relevantes:
+## Observacoes Para Evolucao
 
-- `Atividade.aluno`, `Atividade.professorOrientador` e `Atividade.turma` sao obrigatorios.
-- `Atividade.professorTutor` e opcional.
-- `Atividade.atividadePai` permite representar atividades-filhas.
-- `Feedback` sempre pertence a uma atividade e a um professor.
-- O status `ALTA` representa encerramento e, conforme regra atual, deve ser irreversivel.
-
-## Observacoes para evolucao
-
-O modelo atual pressupoe que uma `Atividade` ja possui aluno executante e turma definidos.
-Se o fluxo da clinica exigir agendamentos ou demandas ainda sem aluno atribuido, recomenda-se
-criar uma entidade anterior, como `DemandaClinica` ou `EncaminhamentoClinico`, em vez de tornar
+O modelo atual pressupoe que uma `Atividade` ja possui aluno executante e turma definidos. Se o
+fluxo da clinica exigir agendamentos ou demandas ainda sem aluno atribuido, recomenda-se criar
+uma entidade anterior, como `DemandaClinica` ou `EncaminhamentoClinico`, em vez de tornar
 `Atividade.aluno` opcional sem revisar as regras atuais.
-
-Essa entidade futura poderia ser criada por um sistema de agendamento e, posteriormente,
-convertida em `Atividade` quando aluno, turma e professores forem definidos.

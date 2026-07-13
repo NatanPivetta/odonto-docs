@@ -132,3 +132,29 @@ no banco e está coberta pelo guard do `TurmaService` para novas matrículas (it
   [NatanPivetta/odonto-terraform](https://github.com/NatanPivetta/odonto-terraform)
   com `.gitignore` excluindo `*.tfvars`, `*.tfstate*` e `.terraform/`.
 - **`src.rar`** na raiz do projeto: artefato antigo; avaliar remoção.
+
+## Backlog funcional
+
+- **Disciplinas clinicas e turmas estruturadas:** separar disciplina curricular
+  de turma ofertada. Disciplinas iniciais: `ODO99012 - CLINICA ODONTOLOGICA I`,
+  `ODO99013 - CLINICA ODONTOLOGICA II`, `ODO99014 - CLINICA ODONTOLOGICA III`,
+  `ODO99016 - CLINICA ODONTOLOGICA IV`. Turma deve possuir codigo proprio,
+  semestre e disciplina.
+- **Escopo de turmas por professor/coordenador/admin:** professor deve visualizar
+  apenas turmas vinculadas a ele; coordenador e admin devem visualizar todas as
+  turmas do seu escopo. Requer revisao dos papeis atuais e dos filtros de
+  listagem.
+
+## Backlog tecnico
+
+- **Enum de disciplinas no backend e banco:** concluido. As disciplinas clinicas
+  foram padronizadas por enum/codigo (`ODO99012`, `ODO99013`, `ODO99014`,
+  `ODO99016`) e `turmas` passou a possuir `codigo_turma`.
+- **Base RBAC:** concluida a estrutura inicial com `roles`, `permissions`,
+  `user_roles` e `role_permissions`. Os resources passaram a usar
+  `hasAuthority(...)`/`hasAnyAuthority(...)`. Pendente evoluir policies
+  contextuais para regras como professor vinculado a turma e aluno acessando
+  apenas recursos proprios.
+- **Vinculo professor-turma:** modelar tabela associativa futura
+  `turma_professores` com `turma_id`, `professor_id`, `tipo_vinculo` e `active`,
+  evitando campos fixos em `turmas`.
